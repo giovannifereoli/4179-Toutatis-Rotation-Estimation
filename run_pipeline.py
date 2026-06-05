@@ -47,11 +47,14 @@ def main():
     # The dominant spin component w3 is the long-axis (retrograde) rate; every
     # genuine observation clusters tightly around ~-98 deg/day.  We flag rows
     # whose w3 is a gross outlier using a robust (median / MAD) z-score - a
-    # data-driven test, not a hand-picked date.  With NSIGMA=5 this removes
-    # exactly the 2008-Nov-22 row (w3 = +93.6, robust z ~ 40) and nothing else;
-    # w1,w2 are deliberately NOT clipped (they legitimately swing +/-35).
+    # data-driven test, not a hand-picked date.  w1,w2 are deliberately NOT
+    # clipped (they legitimately swing +/-35).  The data show a clean gap: the
+    # most extreme *genuine* w3 (2004-10-07, -109 deg/day) sits at |z|~5.3,
+    # while the physically impossible 2008-Nov-22 row (w3 = +93.6, positive!)
+    # sits at |z|~86.  NSIGMA=10 lands in that gap, so only the impossible row
+    # is removed and the real -109 sample is kept.
     REJECT_OUTLIERS = True
-    OUTLIER_NSIGMA = 5.0
+    OUTLIER_NSIGMA = 10.0
     if REJECT_OUTLIERS:
         w3 = om[:, 2]
         med = np.median(w3)
