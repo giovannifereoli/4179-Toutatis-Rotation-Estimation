@@ -42,6 +42,28 @@ def main():
     )
     model = Model(eph)
     jd, eul, om, sig = D.observation_arrays()
+
+    # --- robust statistical outlier rejection ---------------------------
+    # The dominant spin component w3 is the long-axis (retrograde) rate; every
+    # genuine observation clusters tightly around ~-98 deg/day.  We flag rows
+    # whose w3 is a gross outlier using a robust (median / MAD) z-score - a
+    # data-driven test, not a hand-picked date.  With NSIGMA=5 this removes
+    # exactly the 2008-Nov-22 row (w3 = +93.6, robust z ~ 40) and nothing else;
+    # w1,w2 are deliberately NOT clipped (they legitimately swing +/-35).
+    REJECT_OUTLIERS = True
+    OUTLIER_NSIGMA = 5.0
+    if REJECT_OUTLIERS:
+        w3 = om[:, 2]
+        med = np.median(w3)
+        mad = np.median(np.abs(w3 - med)) + 1e-12
+        zrob = 0.6745 * (w3 - med) / mad        # robust (MAD) z-score
+        keep = np.abs(zrob) <= OUTLIER_NSIGMA
+        for j in np.where(~keep)[0]:
+            print(f"  rejected outlier {jd_to_dt(jd[j]):%Y-%m-%d}: "
+                  f"w3={w3[j]:+.1f} deg/day  (robust z={zrob[j]:+.1f}, "
+                  f"|z|>{OUTLIER_NSIGMA})")
+        jd, eul, om, sig = jd[keep], eul[keep], om[keep], sig[keep]
+
     print(
         f"Fitting {len(jd)} Euler-angle observations, "
         f"{jd_to_dt(jd[0]):%Y-%m-%d} .. {jd_to_dt(jd[-1]):%Y-%m-%d}\n"
@@ -244,7 +266,7 @@ def main():
         [r"$\alpha$", r"$\beta$", r"$\gamma$"],
         r"$\rho_i$  [std.]",
         "Figure 7 - Euler-angle residuals (pre-fit hollow, post-fit filled)",
-        os.path.join(OUT, "figure7_euler_residuals.pdf"),
+        f"{OUT}/figure7_euler_residuals.pdf",
     )
 
     # ---- Figure 8 : angular-velocity residuals (validation) ----
@@ -266,11 +288,11 @@ def main():
         [r"$\omega_1$", r"$\omega_2$", r"$\omega_3$"],
         r"$y_i$  [std.]",
         "Figure 8 - angular-velocity residuals (validation)",
-        os.path.join(OUT, "figure8_omega_residuals.pdf"),
+        f"{OUT}/figure8_omega_residuals.pdf",
     )
 
     np.savez(
-        os.path.join(OUT, "solution.npz"),
+        f"{OUT}/solution.npz",
         xref=xf,
         P=P,
         full=full,
@@ -280,9 +302,8 @@ def main():
         t_obs=t_obs,
     )
     print(
-        f"\nWrote {os.path.join(OUT, 'figure7_euler_residuals.pdf')}, "
-        f"{os.path.join(OUT, 'figure8_omega_residuals.pdf')}, "
-        f"{os.path.join(OUT, 'solution.npz')}"
+        f"\nWrote {OUT}/figure7_euler_residuals.pdf, "
+        f"{OUT}/figure8_omega_residuals.pdf, {OUT}/solution.npz"
     )
     print("max |normalized Euler residual| =", round(float(np.max(np.abs(rn))), 3))
 
