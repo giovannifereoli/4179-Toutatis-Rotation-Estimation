@@ -1,0 +1,22 @@
+# Downloaded ephemerides (regenerate with download_ephem.py)
+data/
+
+# Pipeline outputs (figures, logs, solution)
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Tooling / OS
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
